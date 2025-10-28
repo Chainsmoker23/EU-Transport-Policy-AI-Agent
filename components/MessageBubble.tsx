@@ -36,6 +36,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLoading
   const alignmentClasses = isUser ? 'justify-end' : 'justify-start';
   const IconComponent = isUser ? UserIcon : BotIcon;
 
+  const formattedContent = formatText(message.text);
+  if (isLoading && !isUser) {
+    formattedContent.__html += '<span class="ml-1 inline-block animate-pulse">▋</span>';
+  }
+
   return (
     <div className={`flex items-start gap-3 ${alignmentClasses}`}>
       {!isUser && (
@@ -46,14 +51,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLoading
       <div
         className={`max-w-xl xl:max-w-2xl px-4 py-3 rounded-lg shadow-sm ${bubbleClasses}`}
       >
-        {isLoading && message.text.length === 0 ? (
+        {isLoading && message.text.length === 0 && !isUser ? (
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse"></div>
             <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse delay-75"></div>
             <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse delay-150"></div>
           </div>
         ) : (
-          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={formatText(message.text)} />
+          <div className="prose prose-sm max-w-none break-words" dangerouslySetInnerHTML={formattedContent} />
         )}
       </div>
        {isUser && (

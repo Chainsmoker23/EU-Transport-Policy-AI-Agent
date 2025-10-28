@@ -1,16 +1,17 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { type ChatMessage } from '../types';
+import { type ChatMessage, ChatMessageRole } from '../types';
 import { MessageBubble } from './MessageBubble';
-import { SendIcon } from './icons/Icons';
+import { SendIcon, StopIcon } from './icons/Icons';
 
 interface ChatViewProps {
   chatHistory: ChatMessage[];
   isLoading: boolean;
   onSendMessage: (message: string) => void;
+  onStopGenerating: () => void;
 }
 
-export const ChatView: React.FC<ChatViewProps> = ({ chatHistory, isLoading, onSendMessage }) => {
+export const ChatView: React.FC<ChatViewProps> = ({ chatHistory, isLoading, onSendMessage, onStopGenerating }) => {
   const [inputMessage, setInputMessage] = useState('');
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -35,14 +36,27 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatHistory, isLoading, onSe
         className="flex-1 overflow-y-auto p-6 space-y-6"
       >
         {chatHistory.map((message, index) => (
-          <MessageBubble key={index} message={message} />
+          <MessageBubble 
+            key={index} 
+            message={message}
+            isLoading={isLoading && message.role === ChatMessageRole.MODEL && index === chatHistory.length - 1}
+          />
         ))}
-        {isLoading && chatHistory[chatHistory.length - 1].role !== 'model' && (
-            <MessageBubble message={{role: 'model', text: ''}} isLoading={true} />
-        )}
       </div>
 
       <div className="px-6 py-4 bg-white border-t border-slate-200 shadow-inner">
+        {isLoading && (
+            <div className="flex justify-center mb-2">
+                <button
+                    onClick={onStopGenerating}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 border border-slate-300 transition-colors"
+                    aria-label="Stop generating response"
+                >
+                    <StopIcon />
+                    Stop generating
+                </button>
+            </div>
+        )}
         <form onSubmit={handleSubmit} className="relative">
           <textarea
             value={inputMessage}

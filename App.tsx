@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatView } from './components/ChatView';
 import { type UploadedFile, type ChatMessage, ChatMessageRole } from './types';
@@ -14,6 +14,7 @@ const App: React.FC = () => {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleFileUpload = (file: UploadedFile) => {
     setUploadedFiles((prevFiles) => [...prevFiles, file]);
@@ -24,6 +25,9 @@ const App: React.FC = () => {
   };
 
   const handleSendMessage = useCallback(async (message: string) => {
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    
     setIsLoading(true);
     const userMessage: ChatMessage = { role: ChatMessageRole.USER, text: message };
     
@@ -33,6 +37,9 @@ const App: React.FC = () => {
     try {
       const stream = streamChatResponse(message, uploadedFiles, chatHistory);
       for await (const chunk of stream) {
+        if (controller.signal.aborted) {
+          break;
+        }
         setChatHistory((prev) => {
           const newHistory = [...prev];
           const lastMessage = newHistory[newHistory.length - 1];
@@ -43,19 +50,31 @@ const App: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Error streaming response:', error);
-      setChatHistory((prev) => {
-        const newHistory = [...prev];
-        const lastMessage = newHistory[newHistory.length - 1];
-        if (lastMessage.role === ChatMessageRole.MODEL) {
-          lastMessage.text = "Sorry, I encountered an error. Please check the console for details.";
-        }
-        return newHistory;
-      });
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Stream generation stopped by user.');
+      } else {
+        console.error('Error streaming response:', error);
+        setChatHistory((prev) => {
+          const newHistory = [...prev];
+          const lastMessage = newHistory[newHistory.length - 1];
+          if (lastMessage.role === ChatMessageRole.MODEL) {
+            lastMessage.text = "Sorry, I encountered an error. Please check the console for details.";
+          }
+          return newHistory;
+        });
+      }
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   }, [uploadedFiles, chatHistory]);
+
+  const handleStopGenerating = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex h-screen font-sans text-slate-800">
@@ -69,6 +88,7 @@ const App: React.FC = () => {
           chatHistory={chatHistory}
           isLoading={isLoading}
           onSendMessage={handleSendMessage}
+          onStopGenerating={handleStopGenerating}
         />
       </main>
     </div>
