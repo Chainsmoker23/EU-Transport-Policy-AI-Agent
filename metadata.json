@@ -1,0 +1,5 @@
+{
+  "name": "EU Transport Policy AI Agent",
+  "description": "An AI assistant for policymakers to analyze and develop transportation policies. Upload documents and use the chat interface to extract insights, perform analysis, and generate evidence-based recommendations.",
+  "requestFramePermissions": []
+}
